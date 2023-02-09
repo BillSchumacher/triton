@@ -17,10 +17,7 @@ class Autotuner(KernelInterface):
             'top_k': number of configs to bench
             'prune_num_stages_by'(optional): a function used to prune num_stages. It take configs:List[Config] as its input, and returns pruned configs.
         '''
-        if not configs:
-            self.configs = [Config({}, num_warps=4, num_stages=2)]
-        else:
-            self.configs = configs
+        self.configs = configs or [Config({}, num_warps=4, num_stages=2)]
         self.key_idx = [arg_names.index(k) for k in key]
         self.cache = {}
         # hook to reset all required tensor to zeros before relaunching a kernel
@@ -142,11 +139,8 @@ class Config:
         self.pre_hook = pre_hook
 
     def __str__(self):
-        res = []
-        for k, v in self.kwargs.items():
-            res.append(f'{k}: {v}')
-        res.append(f'num_warps: {self.num_warps}')
-        res.append(f'num_stages: {self.num_stages}')
+        res = [f'{k}: {v}' for k, v in self.kwargs.items()]
+        res.extend((f'num_warps: {self.num_warps}', f'num_stages: {self.num_stages}'))
         return ', '.join(res)
 
 
@@ -195,7 +189,7 @@ class Heuristics(KernelInterface):
 
     def run(self, *args, **kwargs):
         for v, heur in self.values.items():
-            kwargs[v] = heur({**dict(zip(self.arg_names, args)), **kwargs})
+            kwargs[v] = heur(**dict(zip(self.arg_names, args)) | kwargs)
         return self.fn.run(*args, **kwargs)
 
 
